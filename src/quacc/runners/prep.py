@@ -137,3 +137,51 @@ def calc_cleanup(
 
     # Remove the tmpdir
     rmtree(tmpdir, ignore_errors=True)
+
+def failed_calc_cleanup(
+    tmpdir: Path | str, job_results_dir: Path | str
+) -> None:
+    """
+    Perform cleanup operations for a calculation, including gzipping files, copying
+    files back to the original directory, and removing the tmpdir.
+
+    Parameters
+    ----------
+    tmpdir
+        The path to the tmpdir, where the calculation will be run. It will be
+        deleted after the calculation is complete.
+    job_results_dir
+        The path to the job_results_dir, where the files will ultimately be
+        stored. A symlink to the tmpdir will be made here during the calculation
+        for convenience.
+
+    Returns
+    -------
+    None
+    """
+    job_results_dir, tmpdir = Path(job_results_dir), Path(tmpdir)
+    logger.info(f"Calculation results stored at {job_results_dir}")
+
+    # Safety check
+    if "tmp-" not in str(tmpdir):
+        msg = f"{tmpdir} does not appear to be a tmpdir... exiting for safety!"
+        raise ValueError(msg)
+
+    # Make the results directory
+    job_results_dir.mkdir(parents=True, exist_ok=True)
+
+    # Gzip files in tmpdir
+    if SETTINGS.GZIP_FILES:
+        gzip_dir(tmpdir)
+
+    # Move files from tmpdir to job_results_dir
+    for file_name in os.listdir(tmpdir):
+        move(tmpdir / file_name, job_results_dir / file_name)
+
+    # Remove symlink to tmpdir
+    if os.name != "nt" and SETTINGS.SCRATCH_DIR:
+        symlink_path = SETTINGS.RESULTS_DIR / f"symlink-{tmpdir.name}"
+        symlink_path.unlink(missing_ok=True)
+
+    # Remove the tmpdir
+    rmtree(tmpdir, ignore_errors=True)

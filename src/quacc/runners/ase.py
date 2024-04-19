@@ -6,6 +6,7 @@ import sys
 from shutil import copy, copytree
 from typing import TYPE_CHECKING
 
+import traceback
 import numpy as np
 from ase.filters import FrechetCellFilter
 from ase.io import Trajectory, read
@@ -16,7 +17,7 @@ from monty.os.path import zpath
 
 from quacc import SETTINGS
 from quacc.atoms.core import copy_atoms, get_final_atoms_from_dynamics
-from quacc.runners.prep import calc_cleanup, calc_setup
+from quacc.runners.prep import calc_cleanup, failed_calc_cleanup, calc_setup
 from quacc.utils.dicts import recursive_dict_merge
 
 try:
@@ -215,29 +216,40 @@ def run_opt(
         atoms = FrechetCellFilter(atoms)
 
     # Run optimization
-    with traj, optimizer(atoms, **optimizer_kwargs) as dyn:
-        if store_intermediate_results:
-            opt = dyn.irun(fmax=fmax, steps=max_steps, **run_kwargs)
-            for i, _ in enumerate(opt):
-                _copy_intermediate_files(
-                    tmpdir,
-                    i,
-                    files_to_ignore=[
-                        traj_file,
-                        optimizer_kwargs["restart"],
-                        optimizer_kwargs["logfile"],
-                    ],
-                )
-        else:
-            dyn.run(fmax=fmax, steps=max_steps, **run_kwargs)
+    try:
+        with traj, optimizer(atoms, **optimizer_kwargs) as dyn:
+            if store_intermediate_results:
+                opt = dyn.irun(fmax=fmax, steps=max_steps, **run_kwargs)
+                for i, _ in enumerate(opt):
+                    _copy_intermediate_files(
+                        tmpdir,
+                        i,
+                        files_to_ignore=[
+                            traj_file,
+                            optimizer_kwargs["restart"],
+                            optimizer_kwargs["logfile"],
+                        ],
+                    )
+            else:
+                dyn.run(fmax=fmax, steps=max_steps, **run_kwargs)
 
-    # Store the trajectory atoms
-    dyn.traj_atoms = read(traj_file, index=":")
+        # Store the trajectory atoms
+        dyn.traj_atoms = read(traj_file, index=":")
 
-    # Perform cleanup operations
-    calc_cleanup(get_final_atoms_from_dynamics(dyn), tmpdir, job_results_dir)
+        # Perform cleanup operations
+        calc_cleanup(get_final_atoms_from_dynamics(dyn), tmpdir, job_results_dir)
 
-    return dyn
+        return dyn
+    except:
+        traj.close()
+
+        failed_job_results_dir = str(tmpdir).replace("tmp", "failed")
+        traceback_message = traceback.format_exc()
+        (tmpdir / "failed.log").write_text(traceback_message)
+
+        failed_calc_cleanup(tmpdir, failed_job_results_dir)
+
+        sys.exit()
 
 
 def run_vib(
