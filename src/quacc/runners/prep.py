@@ -122,6 +122,9 @@ def calc_cleanup(
     # Make the results directory
     job_results_dir.mkdir(parents=True, exist_ok=True)
 
+    # Remove unused files
+    cleanup_unused_files(tmpdir)
+
     # Gzip files in tmpdir
     if SETTINGS.GZIP_FILES:
         gzip_dir(tmpdir)
@@ -170,6 +173,9 @@ def failed_calc_cleanup(
     # Make the results directory
     job_results_dir.mkdir(parents=True, exist_ok=True)
 
+    # Remove unused files
+    cleanup_unused_files(tmpdir)
+
     # Gzip files in tmpdir
     if SETTINGS.GZIP_FILES:
         gzip_dir(tmpdir)
@@ -185,3 +191,14 @@ def failed_calc_cleanup(
 
     # Remove the tmpdir
     rmtree(tmpdir, ignore_errors=True)
+
+def cleanup_unused_files(tmpdir: Path | str) -> None:
+    for foldername, _, filenames in os.walk(tmpdir):
+        for filename in filenames:
+            if filename in [
+                "FILE.47",
+                "orca.densities",
+                "orca.ges",
+                "orca.nbo",
+            ]:
+                os.remove(os.path.join(foldername, filename))
