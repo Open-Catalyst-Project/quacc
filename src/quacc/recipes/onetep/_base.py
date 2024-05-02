@@ -129,9 +129,6 @@ def prep_calculator(
     return Onetep(
         pseudo_path=str(SETTINGS.ONETEP_PP_PATH) if SETTINGS.ONETEP_PP_PATH else ".",
         parallel_info=SETTINGS.ONETEP_PARALLEL_CMD,
-        profile=OnetepProfile(
-            SETTINGS.ONETEP_CMD
-        ),  # TODO: If the ASE merge is successful, we need to change ONETEP_PARALLEL_CMD to a list[str] and remove parallel info.
-        # If we also have access to post_args we can point not to the binary but to the launcher which takes -t nthreads as a post_args
+        profile=OnetepProfile(SETTINGS.ONETEP_CMD),
         **calc_flags,
     )
