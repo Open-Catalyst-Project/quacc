@@ -196,9 +196,6 @@ def cleanup_unused_files(tmpdir: Path | str) -> None:
     for foldername, _, filenames in os.walk(tmpdir):
         for filename in filenames:
             if filename in [
-                "FILE.47",
-                "orca.densities",
                 "orca.ges",
-                "orca.nbo",
             ]:
                 os.remove(os.path.join(foldername, filename))
