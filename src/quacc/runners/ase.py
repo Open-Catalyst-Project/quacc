@@ -240,7 +240,7 @@ def run_opt(
         calc_cleanup(get_final_atoms_from_dynamics(dyn), tmpdir, job_results_dir)
 
         return dyn
-    except:
+    except Exception as exception:
         traj.close()
 
         failed_job_results_dir = str(tmpdir).replace("tmp", "failed")
@@ -249,7 +249,7 @@ def run_opt(
 
         failed_calc_cleanup(tmpdir, failed_job_results_dir)
 
-        sys.exit()
+        raise exception
 
 
 def run_vib(
