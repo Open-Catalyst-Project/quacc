@@ -14,6 +14,7 @@ from ase.optimize import BFGS
 from ase.vibrations import Vibrations
 from monty.dev import requires
 from monty.os.path import zpath
+from monty.shutil import gzip_dir
 
 from quacc import SETTINGS
 from quacc.atoms.core import copy_atoms, get_final_atoms_from_dynamics
@@ -361,3 +362,4 @@ def _copy_intermediate_files(
                 copy(item, store_path)
             elif item.is_dir():
                 copytree(item, store_path / item.name)
+    gzip_dir(store_path)
