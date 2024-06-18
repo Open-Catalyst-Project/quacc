@@ -9,6 +9,8 @@ from typing import TYPE_CHECKING
 
 import traceback
 import boto3
+s3_client = boto3.client("s3")
+
 import numpy as np
 from ase.filters import FrechetCellFilter
 from ase.io import Trajectory, read
@@ -372,7 +374,6 @@ def _copy_intermediate_files(
         gzip_dir(store_path)
     else:
         store_path = tmpdir / "outputs"
-        s3_client = boto3.client("s3")
         s3_client.upload_file(
             str(store_path),
             "opencatalysisdata",
