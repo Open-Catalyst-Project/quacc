@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+import os
 import sys
 from shutil import copy, copytree
 from typing import TYPE_CHECKING
 
 import traceback
+import boto3
 import numpy as np
 from ase.filters import FrechetCellFilter
 from ase.io import Trajectory, read
@@ -137,6 +139,7 @@ def run_opt(
     optimizer: Optimizer = BFGS,
     optimizer_kwargs: OptimizerKwargs | None = None,
     store_intermediate_results: bool = False,
+    backup_intermediate_results: str = None,
     run_kwargs: dict[str, Any] | None = None,
     copy_files: SourceDirectory | dict[SourceDirectory, Filenames] | None = None,
 ) -> Optimizer:
@@ -230,6 +233,7 @@ def run_opt(
                             optimizer_kwargs["restart"],
                             optimizer_kwargs["logfile"],
                         ],
+                        backupdir=backup_intermediate_results,
                     )
             else:
                 dyn.run(fmax=fmax, steps=max_steps, **run_kwargs)
@@ -333,7 +337,7 @@ def _set_sella_kwargs(atoms: Atoms, optimizer_kwargs: dict[str, Any]) -> None:
 
 
 def _copy_intermediate_files(
-    tmpdir: Path, step_number: int, files_to_ignore: list[Path] | None = None
+    tmpdir: Path, step_number: int, files_to_ignore: list[Path] | None = None, backupdir: str = None
 ) -> None:
     """
     Copy all files in the working directory to a subdirectory named `stepN` where `N`
@@ -348,18 +352,30 @@ def _copy_intermediate_files(
         The step number.
     files_to_ignore
         A list of files to ignore when copying files to the subdirectory.
+    backupdir
+        S3 directory to save intermediate results to.
 
     Returns
     -------
     None
     """
     files_to_ignore = files_to_ignore or []
-    store_path = tmpdir / f"step{step_number}"
-    store_path.mkdir()
-    for item in tmpdir.iterdir():
-        if not item.name.startswith("step") and item not in files_to_ignore:
-            if item.is_file():
-                copy(item, store_path)
-            elif item.is_dir():
-                copytree(item, store_path / item.name)
-    gzip_dir(store_path)
+    if not backupdir:
+        store_path = tmpdir / f"step{step_number}"
+        store_path.mkdir()
+        for item in tmpdir.iterdir():
+            if not item.name.startswith("step") and item not in files_to_ignore:
+                if item.is_file():
+                    copy(item, store_path)
+                elif item.is_dir():
+                    copytree(item, store_path / item.name)
+        gzip_dir(store_path)
+    else:
+        store_path = tmpdir / "outputs"
+        s3_client = boto3.client("s3")
+        s3_client.upload_file(
+            str(store_path),
+            "opencatalysisdata",
+            os.path.join(backupdir, f"step{step_number}")
+        )
+        store_path.unlink()
