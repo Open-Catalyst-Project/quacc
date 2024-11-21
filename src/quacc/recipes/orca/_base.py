@@ -97,6 +97,7 @@ def run_and_summarize_opt(
     opt_params: dict[str, Any] | None = None,
     additional_fields: dict[str, Any] | None = None,
     copy_files: SourceDirectory | dict[SourceDirectory, Filenames] | None = None,
+    step_counter_start: int = 0,
     **calc_kwargs,
 ) -> cclibASEOptSchema:
     """
@@ -128,6 +129,8 @@ def run_and_summarize_opt(
         Any additional fields to supply to the summarizer.
     copy_files
         Files to copy (and decompress) from source to the runtime directory.
+    step_counter_start
+        Index to start step counter on (used for optimization restarts)
     **calc_kwargs
         Any other keyword arguments to pass to the `ORCA` calculator.
 
@@ -147,7 +150,7 @@ def run_and_summarize_opt(
     )
 
     opt_flags = recursive_dict_merge(opt_defaults, opt_params)
-    dyn = run_opt(atoms, copy_files=copy_files, **opt_flags)
+    dyn = run_opt(atoms, copy_files=copy_files, step_counter_start=step_counter_start, **opt_flags)
     return summarize_cclib_opt_run(dyn, LOG_FILE, additional_fields=additional_fields)
 
 

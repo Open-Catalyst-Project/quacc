@@ -144,6 +144,7 @@ def run_opt(
     backup_intermediate_results: str = None,
     run_kwargs: dict[str, Any] | None = None,
     copy_files: SourceDirectory | dict[SourceDirectory, Filenames] | None = None,
+    step_counter_start: int = 0,
 ) -> Optimizer:
     """
     Run an ASE-based optimization in a scratch directory and copy the results back to
@@ -177,6 +178,8 @@ def run_opt(
         Dictionary of kwargs for the run() method of the optimizer.
     copy_files
         Files to copy (and decompress) from source to the runtime directory.
+    step_counter_start
+        Index to start step counter on (used for optimization restarts)
 
     Returns
     -------
@@ -226,7 +229,7 @@ def run_opt(
         with traj, optimizer(atoms, **optimizer_kwargs) as dyn:
             if store_intermediate_results:
                 opt = dyn.irun(fmax=fmax, steps=max_steps, **run_kwargs)
-                for i, _ in enumerate(opt):
+                for i, _ in enumerate(opt, start=step_counter_start):
                     _copy_intermediate_files(
                         tmpdir,
                         i,
